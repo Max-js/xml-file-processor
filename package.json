@@ -1,0 +1,20 @@
+{
+  "name": "xml-file-processor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "orders": "./app/main.ts"
+  },
+  "scripts": {
+    "init-db": "node --env-file=.env app/main.ts init-db",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "postgres": "3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.9.3"
+  }
+}
