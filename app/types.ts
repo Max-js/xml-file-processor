@@ -38,3 +38,33 @@ export interface OrderLine {
   item_id: number;
   seq: number;
 }
+
+//INFO:  Parsed shapes, as read from XML
+export interface ParsedCustomer {
+  customer_code: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+export interface ParsedAddress {
+  address_type: string | null;
+  full_name: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  country_code: string | null;
+}
+
+export interface ParsedOrderLine {
+  item_num: string;
+  item_description: string | null;
+}
+
+export interface ParsedOrder {
+  reference_num: string;
+  seq: number | null;
+  customer: ParsedCustomer;
+  address: ParsedAddress;
+  lines: ParsedOrderLine[];
+}
