@@ -11,7 +11,8 @@ Imports orders from an XML file into PostgreSQL and edits them from the terminal
 
 1. Run `npm ci`
 2. Copy the Database url from `.env.example` to a `.env` file
-3. Run `npm run setup` which initializes the DB and imports the `input.xml` file
+3. Open / run Docker Desktop
+4. Run `npm run setup` which initializes the DB and imports the `input.xml` file
 
 The schema is created by `init-db`.
 
