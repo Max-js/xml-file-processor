@@ -8,6 +8,9 @@
   },
   "scripts": {
     "init-db": "node --env-file=.env app/main.ts init-db",
+    "import": "node --env-file=.env app/main.ts import",
+    "list": "node --env-file=.env app/main.ts list",
+    "show": "node --env-file=.env app/main.ts show",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
