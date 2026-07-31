@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "setup": "cp -n .env.example .env; docker compose up -d --wait && npm run init-db && npm run import input.xml",
+    "setup": "docker compose up -d --wait && npm run init-db && npm run import input.xml",
     "init-db": "node --env-file=.env app/main.ts init-db",
     "import": "node --env-file=.env app/main.ts import",
     "list": "node --env-file=.env app/main.ts list",

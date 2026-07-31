@@ -9,13 +9,9 @@ Imports orders from an XML file into PostgreSQL and edits them from the terminal
 
 ## Setup
 
-```sh
-npm ci
-npm run setup
-```
-
-`setup` creates `.env` from `.env.example` if missing, starts PostgreSQL, creates the schema,
-and imports `input.xml`.
+1. Run `npm ci`
+2. Copy the Database url from `.env.example` to a `.env` file
+3. Run `npm run setup` which initializes the DB and imports the `input.xml` file
 
 The schema is created by `init-db`.
 
