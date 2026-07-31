@@ -129,11 +129,11 @@ stays open.
 ## Schema
 
 ```
-customers ──< addresses          an address belongs to a customer
-customers ──< orders
-orders    >── addresses          an order points at one of its customer's addresses
-orders    ──< order_lines
-items     ──< order_lines
+customers ──< addresses          customer hasMany addresses, address hasOne customer
+customers ──< orders             customer hasMany orders, order hasOne customer
+orders    >── addresses          address hasMany orders, order hasOne address
+orders    ──< order_lines        order hasMany order_lines
+items     ──< order_lines        item hasMany order_lines
 ```
 
 | Table | Columns |
