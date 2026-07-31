@@ -11,6 +11,7 @@
     "import": "node --env-file=.env app/main.ts import",
     "list": "node --env-file=.env app/main.ts list",
     "show": "node --env-file=.env app/main.ts show",
+    "edit": "node --env-file=.env app/main.ts edit",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
