@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "orders": "./app/main.ts"
-  },
   "scripts": {
+    "setup": "cp -n .env.example .env; docker compose up -d --wait && npm run init-db && npm run import input.xml",
     "init-db": "node --env-file=.env app/main.ts init-db",
     "import": "node --env-file=.env app/main.ts import",
     "list": "node --env-file=.env app/main.ts list",
@@ -15,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.2.5",
+    "fast-xml-parser": "5.2.5",
     "postgres": "3.4.5"
   },
   "devDependencies": {

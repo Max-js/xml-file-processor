@@ -48,7 +48,7 @@ export function showOrder(order: OrderDetail) {
   field("line 2", order.address.address_line2);
   field("country", order.address.country_code);
 
-  console.log(bold("\nCustomer") + dim(" (read-only, not editable)"));
+  console.log(bold("\nCustomer") + dim(" (read-only)"));
   console.log(
     dim(
       [
