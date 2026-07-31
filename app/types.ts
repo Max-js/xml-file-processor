@@ -61,6 +61,17 @@ export interface ParsedOrderLine {
   item_description: string | null;
 }
 
+export interface ImportSummary {
+  orders: { reference_num: string; status: "inserted" | "updated" | "unchanged" }[];
+  counts: {
+    customers: number;
+    items: number;
+    addresses: number;
+    orders: number;
+    order_lines: number;
+  };
+}
+
 export interface ParsedOrder {
   reference_num: string;
   seq: number | null;
