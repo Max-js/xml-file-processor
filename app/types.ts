@@ -36,7 +36,7 @@ export interface OrderLine {
   id: number;
   order_id: number;
   item_id: number;
-  seq: number;
+  seq: number | null;
 }
 
 //INFO:  Parsed shapes, as read from XML
@@ -59,6 +59,15 @@ export interface ParsedAddress {
 export interface ParsedOrderLine {
   item_num: string;
   item_description: string | null;
+  seq: number | null;
+}
+
+export interface ParsedOrder {
+  reference_num: string;
+  seq: number | null;
+  customer: ParsedCustomer;
+  address: ParsedAddress;
+  lines: ParsedOrderLine[];
 }
 
 export interface ImportSummary {
@@ -72,10 +81,28 @@ export interface ImportSummary {
   };
 }
 
-export interface ParsedOrder {
+//INFO: CLI query results
+
+export interface OrderSummary {
+  reference_num: string;
+  customer_name: string | null;
+  country_code: string | null;
+  line_count: number;
+}
+
+export interface OrderDetailLine {
+  id: number;
+  seq: number | null;
+  item_num: string;
+  description: string | null;
+}
+
+export interface OrderDetail {
+  id: number;
   reference_num: string;
   seq: number | null;
-  customer: ParsedCustomer;
-  address: ParsedAddress;
-  lines: ParsedOrderLine[];
+  created_at: Date;
+  customer: Customer;
+  address: Address;
+  lines: OrderDetailLine[];
 }

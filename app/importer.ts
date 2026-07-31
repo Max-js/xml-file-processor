@@ -62,8 +62,10 @@ async function resolveAddress(
 async function importOrder(tx: Tx, order: ParsedOrder) {
   const customerId = await upsertCustomer(tx, order.customer);
   const addressId = await resolveAddress(tx, customerId, order.address);
-  const itemIds: number[] = [];
-  for (const line of order.lines) itemIds.push(await upsertItem(tx, line));
+  const lines: { itemId: number; seq: number | null }[] = [];
+  for (const line of order.lines) {
+    lines.push({ itemId: await upsertItem(tx, line), seq: line.seq });
+  }
 
   const [before] = await tx<{ id: number; customer_id: number; address_id: number; seq: number | null }[]>`
     select id, customer_id, address_id, seq from orders
@@ -71,15 +73,15 @@ async function importOrder(tx: Tx, order: ParsedOrder) {
 
   let status: "inserted" | "updated" | "unchanged" = "inserted";
   if (before) {
-    const existingItems = await tx<{ item_id: number }[]>`
-      select item_id from order_lines where order_id = ${before.id} order by seq`;
+    const existing = await tx<{ item_id: number; seq: number | null }[]>`
+      select item_id, seq from order_lines where order_id = ${before.id} order by id`;
     const sameHeader =
       before.customer_id === customerId &&
       before.address_id === addressId &&
       before.seq === order.seq;
     const sameLines =
-      existingItems.length === itemIds.length &&
-      existingItems.every((row, i) => row.item_id === itemIds[i]);
+      existing.length === lines.length &&
+      existing.every((row, i) => row.item_id === lines[i]!.itemId && row.seq === lines[i]!.seq);
     status = sameHeader && sameLines ? "unchanged" : "updated";
   }
 
@@ -95,9 +97,9 @@ async function importOrder(tx: Tx, order: ParsedOrder) {
 
   //INFO: Wipe and replace order lines on re-import since orderLines don't have a key for upserting
   await tx`delete from order_lines where order_id = ${orderId}`;
-  for (const [i, itemId] of itemIds.entries()) {
+  for (const line of lines) {
     await tx`insert into order_lines (order_id, item_id, seq)
-             values (${orderId}, ${itemId}, ${i + 1})`;
+             values (${orderId}, ${line.itemId}, ${line.seq})`;
   }
 
   return { reference_num: order.reference_num, status };

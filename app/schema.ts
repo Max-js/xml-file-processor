@@ -37,6 +37,6 @@ export const DDL = `
     id       serial PRIMARY KEY,
     order_id integer NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     item_id  integer NOT NULL REFERENCES items(id),
-    seq      integer NOT NULL
+    seq      integer
   );
 `;

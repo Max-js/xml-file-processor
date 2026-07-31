@@ -55,6 +55,7 @@ function orderLineOf(raw: any, where: string, position: number): ParsedOrderLine
   return {
     item_num: required(raw?.ItemNum, "ItemNum", `${where} line ${position}`),
     item_description: text(raw?.ItemDescription),
+    seq: seq(raw?.["@_seq"]),
   };
 }
 
