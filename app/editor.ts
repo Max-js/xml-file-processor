@@ -22,7 +22,6 @@ export async function listOrders(): Promise<OrderSummary[]> {
      order by o.reference_num`;
 }
 
-// Returns null rather than raising when the reference number is unknown.
 export async function getOrder(referenceNum: string): Promise<OrderDetail | null> {
   const [header] = await sql<
     (Omit<OrderDetail, "customer" | "address" | "lines"> & {
@@ -61,6 +60,12 @@ export async function updateAddress(addressId: number, fields: Partial<Omit<Addr
   const columns = Object.keys(fields) as (keyof typeof fields)[];
   if (columns.length === 0) return;
   await sql`update addresses set ${sql(fields, ...columns)} where id = ${addressId}`;
+}
+
+export async function findItem(itemNum: string) {
+  const [item] = await sql<{ id: number; item_num: string; description: string | null }[]>`
+    select id, item_num, description from items where item_num = ${itemNum}`;
+  return item ?? null;
 }
 
 async function itemIdOf(tx: TransactionSql, itemNum: string): Promise<number> {

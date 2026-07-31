@@ -1,5 +1,13 @@
 import { createInterface } from "node:readline/promises";
-import { getOrder, updateAddress, updateReferenceNum } from "./editor.ts";
+import {
+  addLine,
+  changeLineItem,
+  deleteLine,
+  findItem,
+  getOrder,
+  updateAddress,
+  updateReferenceNum,
+} from "./editor.ts";
 import { bold, dim, shown, showOrder } from "./view.ts";
 import type { Address, OrderDetail } from "./types.ts";
 
@@ -16,10 +24,18 @@ const ADDRESS_FIELDS: { label: string; key: AddressField }[] = [
   { label: "country code", key: "country_code" },
 ];
 
+interface DraftLine {
+  id: number | null;
+  seq: number | null;
+  item_num: string;
+  description: string | null;
+}
+
 //INFO: Buffering edits until saved
 interface Draft {
   reference_num: string;
   address: Record<AddressField, string | null>;
+  lines: DraftLine[];
 }
 
 function draftOf(order: OrderDetail): Draft {
@@ -28,6 +44,12 @@ function draftOf(order: OrderDetail): Draft {
     address: Object.fromEntries(
       ADDRESS_FIELDS.map(({ key }) => [key, order.address[key]]),
     ) as Draft["address"],
+    lines: order.lines.map((line) => ({
+      id: line.id,
+      seq: line.seq,
+      item_num: line.item_num,
+      description: line.description,
+    })),
   };
 }
 
@@ -35,12 +57,36 @@ function changes(draft: Draft, original: Draft) {
   const address = ADDRESS_FIELDS.map(({ key }) => key).filter(
     (key) => draft.address[key] !== original.address[key],
   );
-  return { reference: draft.reference_num !== original.reference_num, address };
+
+  const kept = new Set(draft.lines.map((line) => line.id));
+  const deleted = original.lines.filter((line) => !kept.has(line.id)).map((line) => line.id!);
+  const added = draft.lines.filter((line) => line.id === null);
+  const repointed = draft.lines.filter((line) => {
+    const before = original.lines.find((candidate) => candidate.id === line.id);
+    return before !== undefined && before.item_num !== line.item_num;
+  });
+
+  return {
+    reference: draft.reference_num !== original.reference_num,
+    address,
+    deleted,
+    added,
+    repointed,
+    get any() {
+      return (
+        this.reference ||
+        this.address.length > 0 ||
+        this.deleted.length > 0 ||
+        this.added.length > 0 ||
+        this.repointed.length > 0
+      );
+    },
+  };
 }
 
 function menu(draft: Draft, original: Draft) {
   const mark = (changed: boolean) => (changed ? bold(" *") : "");
-  const { reference, address } = changes(draft, original);
+  const { reference, address, deleted, added, repointed } = changes(draft, original);
 
   console.log(bold("\nEdit"));
   console.log(`  1  ${"reference number".padEnd(17)}${shown(draft.reference_num)}${mark(reference)}`);
@@ -49,7 +95,80 @@ function menu(draft: Draft, original: Draft) {
       `  ${i + 2}  ${label.padEnd(17)}${shown(draft.address[key])}${mark(address.includes(key))}`,
     );
   });
+  const linesChanged = deleted.length > 0 || added.length > 0 || repointed.length > 0;
+  console.log(`  l  ${"lines".padEnd(17)}${draft.lines.length}${mark(linesChanged)}`);
   console.log(dim("  s  save        q  quit"));
+}
+
+function showDraftLines(draft: Draft, original: Draft) {
+  console.log(bold("\nLines"));
+  if (draft.lines.length === 0) {
+    console.log(dim("  none"));
+    return;
+  }
+  draft.lines.forEach((line, i) => {
+    const before = original.lines.find((candidate) => candidate.id === line.id);
+    const state =
+      line.id === null ? bold(" (new)") : before && before.item_num !== line.item_num ? bold(" (changed)") : "";
+    console.log(
+      `  ${String(i + 1).padEnd(3)}seq ${shown(line.seq).padEnd(4)}${line.item_num.padEnd(10)}${shown(line.description)}${state}`,
+    );
+  });
+}
+
+//INFO: Buffer for line changes
+async function linesMenu(draft: Draft, original: Draft, ask: Ask) {
+  for (;;) {
+    showDraftLines(draft, original);
+    console.log(dim("  a  add     c  change item     d  delete     b  back"));
+    const choice = (await ask("lines> ")).trim().toLowerCase();
+
+    if (choice === "b") return;
+
+    if (choice === "a") {
+      const itemNum = (await ask("  item number: ")).trim();
+      if (itemNum === "") continue;
+      const item = await findItem(itemNum);
+      if (!item) {
+        console.log(`  unknown item ${itemNum}`);
+        continue;
+      }
+      draft.lines.push({ id: null, seq: null, item_num: item.item_num, description: item.description });
+      continue;
+    }
+
+    if (choice === "c" || choice === "d") {
+      if (draft.lines.length === 0) {
+        console.log("  no lines");
+        continue;
+      }
+      const picked = Number((await ask("  line number: ")).trim());
+      const line = draft.lines[picked - 1];
+      if (!Number.isInteger(picked) || !line) {
+        console.log("  pick a line number from the list");
+        continue;
+      }
+
+      if (choice === "d") {
+        draft.lines.splice(picked - 1, 1);
+        continue;
+      }
+
+      console.log(`  current item: ${line.item_num}`);
+      const itemNum = (await ask("  new item number (blank to keep): ")).trim();
+      if (itemNum === "") continue;
+      const item = await findItem(itemNum);
+      if (!item) {
+        console.log(`  unknown item ${itemNum}`);
+        continue;
+      }
+      line.item_num = item.item_num;
+      line.description = item.description;
+      continue;
+    }
+
+    console.log("  pick a, c, d, or b");
+  }
 }
 
 export type Ask = (prompt: string) => Promise<string>;
@@ -81,8 +200,7 @@ export async function editSession(
       const choice = (await io.ask("> ")).trim().toLowerCase();
 
       if (choice === "q") {
-        const { reference, address } = changes(draft, original);
-        if (!reference && address.length === 0) return true;
+        if (!changes(draft, original).any) return true;
         const confirm = (await io.ask("discard unsaved changes? (y/n) ")).trim().toLowerCase();
         if (confirm === "y") {
           console.log("changes discarded");
@@ -91,22 +209,30 @@ export async function editSession(
         continue;
       }
 
+      if (choice === "l") {
+        await linesMenu(draft, original, io.ask);
+        continue;
+      }
+
       if (choice === "s") {
-        const { reference, address } = changes(draft, original);
-        if (!reference && address.length === 0) {
+        const pending = changes(draft, original);
+        if (!pending.any) {
           console.log("nothing to save");
           continue;
         }
         try {
-          if (reference) await updateReferenceNum(order.id, draft.reference_num);
-          if (address.length > 0) {
+          if (pending.reference) await updateReferenceNum(order.id, draft.reference_num);
+          if (pending.address.length > 0) {
             await updateAddress(
               order.address.id,
-              Object.fromEntries(address.map((key) => [key, draft.address[key]])),
+              Object.fromEntries(pending.address.map((key) => [key, draft.address[key]])),
             );
           }
+          for (const id of pending.deleted) await deleteLine(id);
+          for (const line of pending.repointed) await changeLineItem(line.id!, line.item_num);
+          for (const line of pending.added) await addLine(order.id, line.item_num);
         } catch (error) {
-          // A reference-number collision keeps the session open.
+          //INFO: Reference-number collision keeps the session open.
           console.error((error as Error).message);
           continue;
         }
